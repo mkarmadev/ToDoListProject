@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Total_Amount_of_Proj_can_not_exceed_100</fullName>
+    <active>true</active>
+    <description>Total amount of Projects for 1 Person can not exceed 100</description>
+    <errorConditionFormula>Total_Amount_of_Projects__c &gt; 100</errorConditionFormula>
+    <errorMessage>Total amount of Projects for 1 Person can not exceed 100</errorMessage>
+</ValidationRule>
