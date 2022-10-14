@@ -1,6 +1,11 @@
 @isTest
 public with sharing class ToDoListDAOTest {
     
+    static final String Person_Name_For_Overdue_Task = 'PersonForOverdueTask';
+    static final String Person_Name_For_Five_Biggest_Projects = 'PersonForFiveBiggestProjects';
+    static final String Overdue_Project_Name = 'OverdueProject';
+    static final String Biggest_Project_Name = 'BiggestProjects';
+
     @testSetup
     static void setup() {
 
@@ -9,30 +14,34 @@ public with sharing class ToDoListDAOTest {
         
         for (Integer i=0; i<4; i++) {
             persons.add(
-                        createPerson('PersonForOverdueTask'));
+                createPerson(Person_Name_For_Overdue_Task)
+            );
         }
 
         for (Integer i=0; i<14; i++) {
             persons.add(
-                        createPerson('PersonForFiveBiggestProjects'));
+                createPerson(Person_Name_For_Five_Biggest_Projects)
+            );
         }
         insert persons;
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        List<Person__c> personsForOverdueTasks = [SELECT Id FROM Person__c WHERE First_Name__c = 'PersonForOverdueTask'];
-        List<Person__c> personsForBiggestProjects = [SELECT Id FROM Person__c WHERE First_Name__c = 'PersonForFiveBiggestProjects'];
+        List<Person__c> personsForOverdueTasks = [SELECT Id FROM Person__c WHERE First_Name__c =: Person_Name_For_Overdue_Task];
+        List<Person__c> personsForBiggestProjects = [SELECT Id FROM Person__c WHERE First_Name__c =: Person_Name_For_Five_Biggest_Projects];
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         List<Project__c> projects = new List<Project__c>();
 
         for (Integer i=0; i<4; i++) {
             projects.add( 
-                         createProject('OverdueProject ' + i, 'In Progress'));
+                createProject(Overdue_Project_Name + i)
+            );
         }
 
         for (Integer i=0; i<7; i++) {
             projects.add(
-                        createProject('BiggestProjects ' + i, 'In Progress'));
+                createProject(Biggest_Project_Name + i)
+            );
         }
         insert projects;
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -41,20 +50,23 @@ public with sharing class ToDoListDAOTest {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         List<Task__c> tasks = new List<Task__c>();
         //create Overdue Tasks for Overdue Project
-        for(Project__c project : [SELECT Id FROM Project__c WHERE Name LIKE 'OverdueProject%']){
+        for(Project__c project : [SELECT Id FROM Project__c WHERE Name LIKE :(Overdue_Project_Name +'%')]){
 
             for(Person__c person : personsForOverdueTasks){ 
                 tasks.add(
-                        createOverdueTask(project.Id, person.Id));
+                    createOverdueTask(project.Id, person.Id)
+                );
             }    
         }
 
+        //create Tasks for Biggest Projects
         Integer numberOfTasksForTheProject = personsForBiggestProjects.size();
-        for(Project__c project : [SELECT Id FROM Project__c WHERE Name LIKE 'BiggestProjects%']){
+        for(Project__c project : [SELECT Id FROM Project__c WHERE Name LIKE :(Biggest_Project_Name + '%')]){
 
             for(Integer i = 0; i < numberOfTasksForTheProject; i++){
-                    tasks.add(
-                                createStandartTask(project.Id, personsForBiggestProjects[i].Id));    
+                tasks.add(
+                    createStandardTask(project.Id, personsForBiggestProjects[i].Id)
+                );    
             }
     
             numberOfTasksForTheProject -= 2;
@@ -76,14 +88,14 @@ public with sharing class ToDoListDAOTest {
     @isTest
     public static void testGetOverdueTasksByProjectIds(){
 
-        Set<Id> personIds = new Map<Id, Person__c>([SELECT ID FROM Person__c WHERE First_Name__c = 'PersonForOverdueTask']).keyset();
+        Set<Id> personIds = new Map<Id, Person__c>([SELECT ID FROM Person__c WHERE First_Name__c = :Person_Name_For_Overdue_Task]).keyset();
 
         Map<Id, List<Task__c>> tasksByProjectIds = ToDoListDAO.getOverdueTasksByProjectIds(personIds);
 
         System.assert(tasksByProjectIds.size() > 0, 'Method did not return any data');
 
 
-        Map<Id, Set<Id>> expectedTaskByProjectIds = new Map<Id, Set<Id>>();
+        Map<Id, Set<Id>> expectedTaskIdsByProjectIds = new Map<Id, Set<Id>>();
         for(Project__c project: [SELECT Id, (SELECT Id, Name, Project__c  FROM Tasks__r 
                                                                             WHERE Person__c IN : personIds 
                                                                                 AND Status__c = 'Started'  
@@ -94,22 +106,22 @@ public with sharing class ToDoListDAOTest {
             if(project.Tasks__r.size() > 0) {
                 Set<Id> taskIds = new Map<Id, Task__c>(project.Tasks__r).keyset();
                 
-                expectedTaskByProjectIds.put(project.Id, taskIds);
+                expectedTaskIdsByProjectIds.put(project.Id, taskIds);
             }                                                     
         } 
-        System.assert(expectedTaskByProjectIds.size() > 0, 'We did not find data to compare');
-        
+        System.assert(expectedTaskIdsByProjectIds.size() > 0, 'We did not find any data to compare');
+
 
         Set<Id> projectsIds         = tasksByProjectIds.keyset();
-        Set<Id> expectedProjectsIds = expectedTaskByProjectIds.keyset();
+        Set<Id> expectedProjectsIds = expectedTaskIdsByProjectIds.keyset();
 
         System.assertEquals(true, expectedProjectsIds.equals(projectsIds), 'Project IDs are different');
 
         
-        for(ID projectKey : expectedTaskByProjectIds.keySet()){
+        for(ID projectKey : expectedTaskIdsByProjectIds.keySet()){
             
             Set<Id> taskIds         = new Map<Id, Task__c>(tasksByProjectIds.get(projectKey)).keyset();
-            Set<Id> expectedTaskIds = expectedTaskByProjectIds.get(projectKey);
+            Set<Id> expectedTaskIds = expectedTaskIdsByProjectIds.get(projectKey);
             
             System.assertEquals(true, expectedTaskIds.equals(taskIds), 'Project with ID = ' + projectKey + ' has different task IDs');
         }
@@ -119,39 +131,42 @@ public with sharing class ToDoListDAOTest {
     @isTest
     public static void testGetProjectsByPersonsIds(){
 
-        Set<Id> personIdsOverdueTask = new Map<Id, Person__c>([SELECT ID FROM Person__c WHERE First_Name__c = 'PersonForOverdueTask']).keyset();
+        Set<Id> personIdsOfOverdueTasks = new Map<Id, Person__c>([SELECT ID FROM Person__c WHERE First_Name__c = : Person_Name_For_Overdue_Task]).keyset();
         
-        Map<Id, Set<Id>> projectsByPersonsIds = ToDoListDAO.getProjectsByPersonsIds(personIdsOverdueTask);
+        Map<Id, Set<Id>> projectsByPersonsIds = ToDoListDAO.getProjectsByPersonsIds(personIdsOfOverdueTasks);
 
         System.assert(projectsByPersonsIds.size() > 0, 'Method did not return any data');
 
 
-        Map<Id, Set<Id>> expectedProjectsByPersonsIds = new Map<Id, Set<Id>>();
-        for(Task__c task: [SELECT Id, Project__c, Person__c FROM Task__c WHERE Person__c IN : personIdsOverdueTask]){
+        Map<Id, Set<Id>> expectedProjectsIdsByPersonsIds = new Map<Id, Set<Id>>();
+        for(Task__c task: [SELECT Id, Project__c, Person__c FROM Task__c WHERE Person__c IN : personIdsOfOverdueTasks]){
             
-            Set<Id> projectsIds = expectedProjectsByPersonsIds.get(task.Person__c);
+            Set<Id> projectsIds = expectedProjectsIdsByPersonsIds.get(task.Person__c);
 
             if(projectsIds == null){
-                expectedProjectsByPersonsIds.put(task.Person__c, new Set<Id>{task.Project__c});
+                expectedProjectsIdsByPersonsIds.put(task.Person__c, new Set<Id>{task.Project__c});
             }else {
                 projectsIds.add(task.Project__c);   
             }                                                         
         } 
-        System.assert(expectedProjectsByPersonsIds.size() > 0, 'We did not find data to compare');
+        System.assert(expectedProjectsIdsByPersonsIds.size() > 0, 'We did not find any data to compare');
 
 
-        Set<Id> personIds           = projectsByPersonsIds.keyset();
-        Set<Id> expectedPersonIds   = expectedProjectsByPersonsIds.keyset();
+        System.assertEquals(true, expectedProjectsIdsByPersonsIds.equals(projectsByPersonsIds), 'Returned data is not equal to expected');
+
+
+        /* Set<Id> personIds           = projectsByPersonsIds.keyset();
+        Set<Id> expectedPersonIds   = expectedProjectsIdsByPersonsIds.keyset();
 
         System.assertEquals(true, expectedPersonIds.equals(personIds), 'Person IDs are different');
 
-        for(ID personKey : expectedProjectsByPersonsIds.keySet()){
+        for(ID personKey : expectedProjectsIdsByPersonsIds.keySet()){
             
             Set<Id> projectIds         = projectsByPersonsIds.get(personKey);
-            Set<Id> expectedProjectIds = expectedProjectsByPersonsIds.get(personKey);
+            Set<Id> expectedProjectIds = expectedProjectsIdsByPersonsIds.get(personKey);
             
             System.assertEquals(true, expectedProjectIds.equals(projectIds), 'Person with ID = ' + personKey + ' has different project IDs');
-        }
+        } */
     }
 
     @isTest
@@ -159,11 +174,11 @@ public with sharing class ToDoListDAOTest {
 
         List<Project__c> projects = ToDoListDAO.getFiveBiggestProjects();
         
-        System.assert(projects.size() == 5, 'Method returned incorrect data');
+        System.assert(projects.size() == 5, 'Expected five projects');
 
-        List<Project__c> expectedProjects = [SELECT Id, Status__c, Name FROM Project__c WHERE Name LIKE 'BiggestProjects%' ORDER BY Name LIMIT 5];
+        List<Project__c> expectedProjects = [SELECT Id, Status__c, Name FROM Project__c WHERE Name LIKE :(Biggest_Project_Name + '%') ORDER BY Name LIMIT 5];
         
-        System.assert(expectedProjects.size() > 0, 'We did not find data to compare');
+        System.assert(expectedProjects.size() > 0, 'We did not find any data to compare');
 
 
         Set<Id> projectIds          = new Map<Id, Project__c>(projects).keyset();
@@ -182,7 +197,7 @@ public with sharing class ToDoListDAOTest {
                             End_Date__c = System.today().addDays(-10));                           
     }
 
-    public static Task__c createStandartTask(Id projectId, Id personId){
+    public static Task__c createStandardTask(Id projectId, Id personId){
 
         return new Task__c(
                             Label__c = 'Standart Task', 
@@ -192,11 +207,11 @@ public with sharing class ToDoListDAOTest {
                             End_Date__c = System.today().addMonths(1));                           
     }
 
-    public static Project__c createProject(String projectName, String projectStatus){
+    public static Project__c createProject(String projectName){
 
         return new Project__c(
                                 Name = projectName, 
-                                Status__c = projectStatus);
+                                Status__c = 'In Progress');
     }
 
     public static Person__c createPerson(String firsName){

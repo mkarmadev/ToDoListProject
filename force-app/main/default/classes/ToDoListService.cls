@@ -34,4 +34,41 @@ public class ToDoListService {
 
     }
 
+    public static void createPerson(String fName, String lName){
+
+        Person__c person = New Person__c(First_Name__c = fName, Last_Name__c = lName);
+
+        insert Person__c;
+    }
+
+    public static startNewTask(Id projectId, Id personId){
+
+        Task__c task = new Task__c( 
+                                    Project__c = projectId,
+                                    Person__c  = personId,
+                                    Status__c = 'Draft',
+                                    Start_Date__c = System.today());
+
+    }
+
+    public static updateTaskStatusesForProject(Id projectId, String newStatus){
+        
+        List<Task__c> tasks = [SELECT Id, Status__c FROM Task__c WHERE Project__c =: projectId];
+        for(Task__c task : tasks){
+            task.Status__c = newStatus;    
+        }
+
+        update tasks;
+
+    }
+
+    public status deleteProjects(Set<Id> projectIds){
+
+        List<Project__c> projects = [SELECT Id FROM Project__c WHERE Id IN : projectIds];
+
+        delete projects;
+
+    }
+ 
+
 }
