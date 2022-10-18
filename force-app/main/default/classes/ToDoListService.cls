@@ -38,35 +38,72 @@ public class ToDoListService {
 
         Person__c person = New Person__c(First_Name__c = fName, Last_Name__c = lName);
 
-        insert Person__c;
+        try {
+            
+            insert person;
+
+        }catch(DmlException e){
+
+            System.debug('An unexpected error has occurred: ' + e.getMessage());
+
+            throw e;
+        }
+
     }
 
-    public static startNewTask(Id projectId, Id personId){
+    public static Task__c startNewTask(Id projectId, Id personId){
 
-        Task__c task = new Task__c( 
-                                    Project__c = projectId,
-                                    Person__c  = personId,
-                                    Status__c = 'Draft',
-                                    Start_Date__c = System.today());
+        return new Task__c( 
+                            Project__c = projectId,
+                            Person__c  = personId,
+                            Status__c = 'Draft',
+                            Start_Date__c = System.today());
 
     }
 
-    public static updateTaskStatusesForProject(Id projectId, String newStatus){
+    public static void updateTaskStatusesForProject(Id projectId, String newStatus){
         
         List<Task__c> tasks = [SELECT Id, Status__c FROM Task__c WHERE Project__c =: projectId];
         for(Task__c task : tasks){
             task.Status__c = newStatus;    
         }
 
-        update tasks;
+        
+        Database.SaveResult[] srList = Database.update(tasks, false);
+        
+        for (Database.SaveResult sr : srList) {
+            if (sr.isSuccess()) {
+                
+                System.debug('Successfully updated task. Task ID: ' + sr.getId());
+                
+            }else {
+                // Operation failed, so get all errors                
+        		for(Database.Error err : sr.getErrors()) {
+            		System.debug('The following error has occurred.');                    
+            		System.debug(err.getStatusCode() + ': ' + err.getMessage());
+            		System.debug('Account fields that affected this error: ' + err.getFields());
+                } 
+                    
+            }
+        }
 
     }
 
-    public status deleteProjects(Set<Id> projectIds){
+    public static void deleteProjects(Set<Id> projectIds){
 
         List<Project__c> projects = [SELECT Id FROM Project__c WHERE Id IN : projectIds];
 
-        delete projects;
+    
+        try {
+            
+            delete projects;
+
+        }catch(DmlException e){
+
+            System.debug('An unexpected error has occurred: ' + e.getMessage());
+
+            throw e;    
+        }
 
     }
  
