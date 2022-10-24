@@ -1,5 +1,16 @@
+
 public class ToDoListService {
     
+    public static final String Task_Status_Completed = 'Completed';
+    public static final String Task_Status_Draft     = 'Draft';
+    public static final String Task_Status_Started   = 'Started';
+
+    public static final String Project_Status_Draft   = 'Draft';
+    public static final String Project_Status_InProgress= 'In Progress';
+    public static final String Project_Status_FinishedInTime   = 'Finished In Time';
+    public static final String Project_Status_FinishedWithDelay   = 'Finished With Delay';
+    
+
     public static String getProjectStatus(List<Task__c> tasks, Date projectPlanedEndDate){
 
         Integer completedStatusCount    = 0;
@@ -8,12 +19,12 @@ public class ToDoListService {
 
         for(Task__c task : tasks){
 
-            if(task.Status__c == 'Started'){
+            if(task.Status__c == Task_Status_Started){
                 
                 isInProgress = true;
                 break;
 
-            }else if(task.Status__c == 'Completed'){
+            }else if(task.Status__c == Task_Status_Completed){
                 
                 completedStatusCount += 1;
 
@@ -25,11 +36,11 @@ public class ToDoListService {
 
 
         if(isInProgress){
-            return 'In Progress';
-        }else if(tasks.size() == completedStatusCount){
-            return taskCompletedWithDelay ? 'Finished with Delay' : 'Finished in Time';
+            return Project_Status_InProgress;
+        }else if(tasks.size() > 0 && tasks.size() == completedStatusCount){
+            return taskCompletedWithDelay ? Project_Status_FinishedWithDelay : Project_Status_FinishedInTime;
         }else{
-            return 'Draft';   
+            return Project_Status_Draft;   
         }
 
     }
@@ -56,7 +67,7 @@ public class ToDoListService {
         return new Task__c( 
                             Project__c = projectId,
                             Person__c  = personId,
-                            Status__c = 'Draft',
+                            Status__c = Task_Status_Draft,
                             Start_Date__c = System.today());
 
     }

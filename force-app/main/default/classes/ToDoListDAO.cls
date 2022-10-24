@@ -14,7 +14,7 @@ public class ToDoListDAO {
 
             for(Task__c task: [SELECT Id, Name, Project__c  FROM Task__c 
                                                                 WHERE Person__c IN : personIds 
-                                                                    AND Status__c = 'Started'  
+                                                                    AND Status__c =: ToDoListService.Task_Status_Started  
                                                                         AND End_Date__c <= TODAY]){
                                     
         

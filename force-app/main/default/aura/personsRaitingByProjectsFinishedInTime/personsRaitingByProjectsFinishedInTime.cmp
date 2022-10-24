@@ -1,0 +1,12 @@
+<aura:component controller="PersonController" implements="flexipage:availableForAllPageTypes" access="global">
+
+    <aura:attribute name="persons" type="Object"/>
+    <aura:attribute name="columns" type="List"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+
+    <lightning:card title="5 persons with the biggest number of Finished In Time Projects" iconName="custom:custom62">
+        <lightning:datatable data="{!v.persons }" columns="{!v.columns }" keyField="personId" hideCheckboxColumn="true"/>
+    </lightning:card>    
+
+</aura:component>	

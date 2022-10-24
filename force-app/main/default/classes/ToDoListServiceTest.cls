@@ -1,9 +1,6 @@
 @isTest
 public class ToDoListServiceTest {
     
-    static final String Task_Status_Completed = 'Completed';
-    static final String Task_Status_Draft     = 'Draft';
-    static final String Task_Status_Started   = 'Started';
     static final String Delete_Project_Name      = 'DeleteProject';
     static final String Maintest_Project_Name    = 'MainTestProject';
     static final Date DATE_TODAY                 = System.today();
@@ -16,11 +13,13 @@ public class ToDoListServiceTest {
 
         for (Integer i=0; i<10; i++) {
             projects.add( 
-                createProject(Delete_Project_Name)
+                TestDataFactory.createProject(Delete_Project_Name)
             );
         }
         
-        projects.add(createProject(Maintest_Project_Name));
+        projects.add(
+            TestDataFactory.createProject(Maintest_Project_Name)
+        );
         insert projects;
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -31,21 +30,21 @@ public class ToDoListServiceTest {
         List<Task__c> tasks = new List<Task__c>();
         for (Integer i=0; i<10; i++) {
             tasks.add(
-                createStandardTask(mainProjectId, Task_Status_Draft, DATE_TODAY)
+                TestDataFactory.createStandardTask(mainProjectId, null, ToDoListService.Task_Status_Draft, DATE_TODAY)
             );
         }
 
         for (Integer i=0; i<5; i++) {
             tasks.add(
-                createStandardTask(mainProjectId, Task_Status_Completed, DATE_TODAY)                
+                TestDataFactory.createStandardTask(mainProjectId, null, ToDoListService.Task_Status_Completed, DATE_TODAY)                
             );
         }
         tasks.add(
-            createStandardTask(mainProjectId, Task_Status_Completed, DATE_TODAY.addDays(10))
+            TestDataFactory.createStandardTask(mainProjectId, null, ToDoListService.Task_Status_Completed, DATE_TODAY.addDays(10))
         );
         
         tasks.add(
-            createStandardTask(mainProjectId, Task_Status_Started, DATE_TODAY)
+            TestDataFactory.createStandardTask(mainProjectId, null, ToDoListService.Task_Status_Started, DATE_TODAY)
         );
 
 
@@ -53,7 +52,7 @@ public class ToDoListServiceTest {
 
             for (Integer i=0; i<5; i++) {
                 tasks.add(
-                    createStandardTask(project.Id, Task_Status_Draft, DATE_TODAY)
+                    TestDataFactory.createStandardTask(project.Id, null, ToDoListService.Task_Status_Draft, DATE_TODAY)
                 );
             }
         }
@@ -61,7 +60,7 @@ public class ToDoListServiceTest {
         insert tasks;
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        Person__c person = createPerson('TestPerson');
+        Person__c person = TestDataFactory.createPerson('TestPerson');
         insert person;
 
     }
@@ -71,12 +70,12 @@ public class ToDoListServiceTest {
 
         List<Task__c> tasks = [SELECT Id, Name, Status__c, End_Date__c 
                                         FROM Task__c 
-                                        WHERE Status__c =: Task_Status_Draft 
+                                        WHERE Status__c =: ToDoListService.Task_Status_Draft 
                                             AND Project__r.Name =: Maintest_Project_Name];
 
         String status = ToDoListService.getProjectStatus(tasks, Date.today());
 
-        System.assertEquals('Draft', status, 'Wrong project status when all tasks statuses are equal to Draft');
+        System.assertEquals(ToDoListService.Project_Status_Draft, status, 'Wrong project status when all tasks statuses are equal to Draft');
     }
 
     @isTest
@@ -84,13 +83,13 @@ public class ToDoListServiceTest {
 
         List<Task__c> tasks = [SELECT Id, Name, Status__c, End_Date__c 
                                         FROM Task__c 
-                                        WHERE Status__c =: Task_Status_Completed  
+                                        WHERE Status__c =: ToDoListService.Task_Status_Completed  
                                             AND End_Date__c <= TODAY 
                                                 AND Project__r.Name =:Maintest_Project_Name];
 
         String status = ToDoListService.getProjectStatus(tasks, Date.today());
 
-        System.assertEquals('Finished in Time', status, 'Wrong project status when all tasks are finished in time');
+        System.assertEquals(ToDoListService.Project_Status_FinishedInTime, status, 'Wrong project status when all tasks are finished in time');
     }
 
     @isTest
@@ -98,12 +97,12 @@ public class ToDoListServiceTest {
 
         List<Task__c> tasks = [SELECT Id, Status__c, End_Date__c 
                                         FROM Task__c 
-                                        WHERE Status__c =: Task_Status_Completed 
+                                        WHERE Status__c =: ToDoListService.Task_Status_Completed 
                                             AND Project__r.Name =: Maintest_Project_Name];
         
         String status = ToDoListService.getProjectStatus(tasks, Date.today());
     
-        System.assertEquals('Finished with Delay', status, 'Wrong project status when one task is finished with delay');
+        System.assertEquals(ToDoListService.Project_Status_FinishedWithDelay, status, 'Wrong project status when one task is finished with delay');
     }
 
     @isTest
@@ -115,7 +114,7 @@ public class ToDoListServiceTest {
 
         String status = ToDoListService.getProjectStatus(tasks, Date.today());
 
-        System.assertEquals('In Progress', status, 'Wrong project status when any task is Started');
+        System.assertEquals(ToDoListService.Project_Status_InProgress, status, 'Wrong project status when any task is Started');
     }
 
     @isTest
@@ -123,12 +122,12 @@ public class ToDoListServiceTest {
 
         List<Task__c> tasks = [SELECT Id, Name, Status__c, End_Date__c 
                                         FROM Task__c 
-                                        WHERE Status__c != :Task_Status_Started 
+                                        WHERE Status__c != :ToDoListService.Task_Status_Started 
                                             AND Project__r.Name =: Maintest_Project_Name];
 
         String status = ToDoListService.getProjectStatus(tasks, Date.today());
 
-        System.assertEquals('Draft', status, 'Wrong project status by default');
+        System.assertEquals(ToDoListService.Project_Status_Draft, status, 'Wrong project status by default');
     }
 
     @isTest
@@ -144,7 +143,9 @@ public class ToDoListServiceTest {
         
         System.assert(persons.size() == 0, 'Person record ' + firstName + ' ' + lastName + ' exists in the database');
         
-        ToDoListService.createPerson(firstName, lastName);
+        Test.startTest();
+            ToDoListService.createPerson(firstName, lastName);
+        Test.stopTest();    
 
         persons = [SELECT Id, First_Name__c, Last_Name__c 
                                         FROM Person__c 
@@ -169,7 +170,8 @@ public class ToDoListServiceTest {
         
         System.assertNotEquals(null, task, 'Object not create');
 
-        System.assert(task.Status__c == Task_Status_Draft 
+        System.assert(task.Id == null
+                        && task.Status__c == ToDoListService.Task_Status_Draft 
                             && task.Start_Date__c == System.today(), 'Field values are not correct');
     }
 
@@ -178,14 +180,16 @@ public class ToDoListServiceTest {
 
         ID projectId= [SELECT Id FROM Project__c WHERE Name = : Delete_Project_Name LIMIT 1].Id;
 
-        Integer expectedNumberOfTasks = [SELECT COUNT() FROM Task__c WHERE Project__c =: projectId AND Status__c =: Task_Status_Draft];
+        Integer expectedNumberOfTasks = [SELECT COUNT() FROM Task__c WHERE Project__c =: projectId AND Status__c =: ToDoListService.Task_Status_Draft];
 
         System.assert(expectedNumberOfTasks > 0, 'We did not find any tasks to update');
 
-        ToDoListService.updateTaskStatusesForProject(projectId, Task_Status_Started);
+        Test.startTest();
+            ToDoListService.updateTaskStatusesForProject(projectId, ToDoListService.Task_Status_Started);
+        Test.stopTest();    
 
         System.assertEquals(expectedNumberOfTasks, 
-                                [SELECT COUNT() FROM Task__c WHERE Project__c =: projectId AND Status__c =: Task_Status_Started], 
+                                [SELECT COUNT() FROM Task__c WHERE Project__c =: projectId AND Status__c =: ToDoListService.Task_Status_Started], 
                                     'Status was not updated');
     }
 
@@ -196,31 +200,13 @@ public class ToDoListServiceTest {
         
         System.assert(projectIds.size() > 0, 'We did not find any projects to delete');
 
-        ToDoListService.deleteProjects(projectIds);
+        Test.startTest();
+            ToDoListService.deleteProjects(projectIds);
+        Test.stopTest();    
 
         System.assertEquals(0, [SELECT COUNT() FROM Project__c WHERE Name =: Delete_Project_Name], 'Projects was not deleted');
     }
 
-    public static Project__c createProject(String projectName){
-
-        return new Project__c(
-                                Name = projectName, 
-                                Status__c = 'In Progress');
-    }
-
-    public static Task__c createStandardTask(Id projectId, String status, Date endDate){
-
-        return new Task__c(
-                            Label__c = 'Standart Task', 
-                            Status__c = status, 
-                            Project__c = projectId, 
-                            End_Date__c = endDate);                           
-    }
-
-    public static Person__c createPerson(String firsName){
-
-        return New Person__c(
-                            First_Name__c = firsName);
-    }
+    
 
 }

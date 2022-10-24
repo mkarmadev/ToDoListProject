@@ -1,10 +1,12 @@
 @isTest
 public with sharing class ToDoListDAOTest {
     
+    
     static final String Person_Name_For_Overdue_Task = 'PersonForOverdueTask';
     static final String Person_Name_For_Five_Biggest_Projects = 'PersonForFiveBiggestProjects';
     static final String Overdue_Project_Name = 'OverdueProject';
     static final String Biggest_Project_Name = 'BiggestProjects';
+    static final Date DATE_TODAY                 = System.today();
 
     @testSetup
     static void setup() {
@@ -14,13 +16,13 @@ public with sharing class ToDoListDAOTest {
         
         for (Integer i=0; i<4; i++) {
             persons.add(
-                createPerson(Person_Name_For_Overdue_Task)
+                TestDataFactory.createPerson(Person_Name_For_Overdue_Task)
             );
         }
 
         for (Integer i=0; i<14; i++) {
             persons.add(
-                createPerson(Person_Name_For_Five_Biggest_Projects)
+                TestDataFactory.createPerson(Person_Name_For_Five_Biggest_Projects)
             );
         }
         insert persons;
@@ -34,13 +36,13 @@ public with sharing class ToDoListDAOTest {
 
         for (Integer i=0; i<4; i++) {
             projects.add( 
-                createProject(Overdue_Project_Name + i)
+                TestDataFactory.createProject(Overdue_Project_Name + i)
             );
         }
 
         for (Integer i=0; i<7; i++) {
             projects.add(
-                createProject(Biggest_Project_Name + i)
+                TestDataFactory.createProject(Biggest_Project_Name + i)
             );
         }
         insert projects;
@@ -54,7 +56,7 @@ public with sharing class ToDoListDAOTest {
 
             for(Person__c person : personsForOverdueTasks){ 
                 tasks.add(
-                    createOverdueTask(project.Id, person.Id)
+                    TestDataFactory.createOverdueTask(project.Id, person.Id)
                 );
             }    
         }
@@ -65,7 +67,7 @@ public with sharing class ToDoListDAOTest {
 
             for(Integer i = 0; i < numberOfTasksForTheProject; i++){
                 tasks.add(
-                    createStandardTask(project.Id, personsForBiggestProjects[i].Id)
+                    TestDataFactory.createStandardTask(project.Id, personsForBiggestProjects[i].Id, ToDoListService.Task_Status_Started, DATE_TODAY.addMonths(1))
                 );    
             }
     
@@ -79,7 +81,9 @@ public with sharing class ToDoListDAOTest {
 
         ID personId = [SELECT Id FROM Person__c LIMIT 1].Id;
 
-        Person__c person = ToDoListDAO.getPerson(personId);
+        Test.startTest();
+            Person__c person = ToDoListDAO.getPerson(personId);
+        Test.stopTest();    
 
         System.assertNotEquals(null, person, 'Object not found');
         System.assertEquals(personId, person.Id, 'Found object is not correct');
@@ -90,7 +94,9 @@ public with sharing class ToDoListDAOTest {
 
         Set<Id> personIds = new Map<Id, Person__c>([SELECT ID FROM Person__c WHERE First_Name__c = :Person_Name_For_Overdue_Task]).keyset();
 
-        Map<Id, List<Task__c>> tasksByProjectIds = ToDoListDAO.getOverdueTasksByProjectIds(personIds);
+        Test.startTest();
+            Map<Id, List<Task__c>> tasksByProjectIds = ToDoListDAO.getOverdueTasksByProjectIds(personIds);
+        Test.stopTest();    
 
         System.assert(tasksByProjectIds.size() > 0, 'Method did not return any data');
 
@@ -98,7 +104,7 @@ public with sharing class ToDoListDAOTest {
         Map<Id, Set<Id>> expectedTaskIdsByProjectIds = new Map<Id, Set<Id>>();
         for(Project__c project: [SELECT Id, (SELECT Id, Name, Project__c  FROM Tasks__r 
                                                                             WHERE Person__c IN : personIds 
-                                                                                AND Status__c = 'Started'  
+                                                                                AND Status__c =: ToDoListService.Task_Status_Started  
                                                                                     AND End_Date__c <= TODAY)
                                                                 FROM Project__c
                                                                 WHERE Name LIKE 'OverdueProject%'] ){
@@ -133,7 +139,9 @@ public with sharing class ToDoListDAOTest {
 
         Set<Id> personIdsOfOverdueTasks = new Map<Id, Person__c>([SELECT ID FROM Person__c WHERE First_Name__c = : Person_Name_For_Overdue_Task]).keyset();
         
-        Map<Id, Set<Id>> projectsByPersonsIds = ToDoListDAO.getProjectsByPersonsIds(personIdsOfOverdueTasks);
+        Test.startTest();
+            Map<Id, Set<Id>> projectsByPersonsIds = ToDoListDAO.getProjectsByPersonsIds(personIdsOfOverdueTasks);
+        Test.stopTest();    
 
         System.assert(projectsByPersonsIds.size() > 0, 'Method did not return any data');
 
@@ -151,9 +159,7 @@ public with sharing class ToDoListDAOTest {
         } 
         System.assert(expectedProjectsIdsByPersonsIds.size() > 0, 'We did not find any data to compare');
 
-
         System.assertEquals(true, expectedProjectsIdsByPersonsIds.equals(projectsByPersonsIds), 'Returned data is not equal to expected');
-
 
         /* Set<Id> personIds           = projectsByPersonsIds.keyset();
         Set<Id> expectedPersonIds   = expectedProjectsIdsByPersonsIds.keyset();
@@ -172,7 +178,9 @@ public with sharing class ToDoListDAOTest {
     @isTest
     public static void testGetFiveBiggestProjects(){
 
-        List<Project__c> projects = ToDoListDAO.getFiveBiggestProjects();
+        Test.startTest();
+            List<Project__c> projects = ToDoListDAO.getFiveBiggestProjects();
+        Test.stopTest();    
         
         System.assert(projects.size() == 5, 'Expected five projects');
 
@@ -187,38 +195,7 @@ public with sharing class ToDoListDAOTest {
         System.assertEquals(true, expectedProjectIds.equals(projectIds), 'Project IDs are different');
     }
 
-    public static Task__c createOverdueTask(Id projectId, Id personId){
-
-        return new Task__c(
-                            Label__c = 'Overdue Task', 
-                            Status__c = 'Started', 
-                            Project__c = projectId,
-                            Person__c  = personId, 
-                            End_Date__c = System.today().addDays(-10));                           
-    }
-
-    public static Task__c createStandardTask(Id projectId, Id personId){
-
-        return new Task__c(
-                            Label__c = 'Standart Task', 
-                            Status__c = 'Started', 
-                            Project__c = projectId,
-                            Person__c  = personId, 
-                            End_Date__c = System.today().addMonths(1));                           
-    }
-
-    public static Project__c createProject(String projectName){
-
-        return new Project__c(
-                                Name = projectName, 
-                                Status__c = 'In Progress');
-    }
-
-    public static Person__c createPerson(String firsName){
-
-        return New Person__c(
-                            First_Name__c = firsName);
-    }
+    
 
 
 
