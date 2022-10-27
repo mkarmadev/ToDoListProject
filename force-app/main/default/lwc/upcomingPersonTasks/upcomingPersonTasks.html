@@ -1,0 +1,25 @@
+<template>
+
+    <lightning-card
+        title="Person Tasks"
+        icon-name="standard:record">
+
+        <lightning-button label="Sync Person" slot="actions" variant="brand" onclick={syncPerson}></lightning-button>
+
+        <div class="slds-var-m-around_medium">
+            <template if:true={tasks}>
+                <lightning-datatable
+                    key-field="taskId"
+                    data={tasks}
+                    columns={columns}
+                    hide-checkbox-column>
+            </lightning-datatable>
+            </template>
+
+            <template if:true={errors}>
+                <c-error-panel errors={errors}></c-error-panel>
+            </template>            
+        </div>
+    </lightning-card>
+    
+</template>
