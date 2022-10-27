@@ -9,6 +9,8 @@ public class ToDoListService {
     public static final String Project_Status_InProgress= 'In Progress';
     public static final String Project_Status_FinishedInTime   = 'Finished In Time';
     public static final String Project_Status_FinishedWithDelay   = 'Finished With Delay';
+    public static final Decimal Person_Task_Bonus   = 25;
+
     
 
     public static String getProjectStatus(List<Task__c> tasks, Date projectPlanedEndDate){
