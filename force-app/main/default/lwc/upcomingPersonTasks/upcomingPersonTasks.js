@@ -2,6 +2,7 @@ import { LightningElement, wire, api} from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { reduceErrors } from 'c/ldsUtils';
 import getUpcomingPersonTasks from '@salesforce/apex/PersonController.getUpcomingPersonTasks';
+import postPersonSyncCallout from '@salesforce/apex/PersonController.postPersonSyncCallout';
 
 const columns = [
     { label: 'Project', fieldName: 'projectName' },
@@ -33,9 +34,20 @@ export default class UpcomingPersonTasks extends LightningElement {
         }
     }
 
+    clickSyncPerson(){
+         
+        postPersonSyncCallout({ 
+            personId: this.recordId
+        }).then(result => {
+            
+            this.showToastMessage("Person Sync", "The person was synced successfully", "success");
 
-    syncPerson(){
-        this.showToastMessage('Failed to sync', 'Person Sync is not yet configured', 'error');
+        })
+        .catch(error => {
+            
+            this.showToastMessage('Failed to sync', error.body.message, 'error');
+
+        });
     }
 
     showToastMessage(title, message, variant){

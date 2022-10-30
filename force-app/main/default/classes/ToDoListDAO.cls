@@ -2,10 +2,9 @@ public class ToDoListDAO {
     
     public static Person__c getPerson(Id personId){
 
-        return [SELECT Id, First_Name__c, Last_Name__c, Is_Synced__c, Total_Amount_of_Projects__c, Total_Amount_of_Tasks__c
+        return [SELECT Id, First_Name__c, Last_Name__c, Is_Synced__c, Total_Amount_of_Projects__c, Total_Amount_of_Tasks__c, Bonus__c
                 FROM Person__c
                 WHERE Id =:personId];
-
     }
     
     public static Map<Id, List<Task__c>> getOverdueTasksByProjectIds(Set<Id> personIds){

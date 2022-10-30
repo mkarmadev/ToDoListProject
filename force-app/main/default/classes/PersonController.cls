@@ -1,5 +1,7 @@
 public class PersonController {
-  
+    
+    public static final String ENDPOINT_BASE = 'https://avenga-school.herokuapp.com/push-data';
+
     @AuraEnabled(cacheable=true)
     public static List<PersonWrapper> getBestPersonsWhoFinishedInTime(Integer personsNumber) {
         
@@ -47,6 +49,56 @@ public class PersonController {
         return taskWrappers;
     }
 
+    @AuraEnabled
+    public static void postPersonSyncCallout(Id personId){
+
+        Person__c person = ToDoListDAO.getPerson(personId);
+        
+        if(person == null){
+            throw new AuraHandledException('We didn\'t find the person to sync');    
+        }
+
+
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint(ENDPOINT_BASE);
+        request.setMethod('POST');
+        request.setHeader('Content-Type', 'application/json');
+        
+        //generate json body
+        String serializedPerson = JSON.serialize(person);
+        request.setBody(serializedPerson);
+
+        HttpResponse response;
+
+        try{
+            Http http = new Http();
+            response = http.send(request);
+
+        }catch(System.CalloutException e){
+            System.debug('An unexpected error has occurred: ' + e.getMessage());
+            throw e;
+        }
+
+        if(response.getStatusCode() == 200) {
+            
+            System.debug('STATUS:' + response.getStatus());
+            System.debug('STATUS_CODE:' + response.getStatusCode());
+            System.debug(response.getBody());
+
+            updateRecordAfterSync(person);
+
+        }else{
+            System.debug('The returned status code was : ' + response.getStatusCode() + ' ' + response.getStatus() + ' Body: ' + response.getBody());
+
+            throw new AuraHandledException('The returned status code was : ' + response.getStatusCode() + ' ' + response.getStatus());
+        }
+
+    }
+
+    public static void updateRecordAfterSync(Person__c person){
+        person.Is_Synced__c = true;
+        update person;
+    }
 
     public class PersonWrapper{
         
