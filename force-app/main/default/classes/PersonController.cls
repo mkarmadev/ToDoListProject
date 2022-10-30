@@ -52,6 +52,12 @@ public class PersonController {
     @AuraEnabled
     public static void postPersonSyncCallout(Id personId){
 
+        postPersonSync(personId);
+
+    }
+
+    @TestVisible private static HttpResponse postPersonSync(Id personId){
+
         Person__c person = ToDoListDAO.getPerson(personId);
         
         if(person == null){
@@ -59,20 +65,15 @@ public class PersonController {
         }
 
 
-        HttpRequest request = new HttpRequest();
-        request.setEndpoint(ENDPOINT_BASE);
-        request.setMethod('POST');
-        request.setHeader('Content-Type', 'application/json');
-        
-        //generate json body
-        String serializedPerson = JSON.serialize(person);
-        request.setBody(serializedPerson);
-
         HttpResponse response;
 
         try{
             Http http = new Http();
+            
+            HttpRequest request = createRequest(ENDPOINT_BASE, person);
             response = http.send(request);
+
+            System.debug('The returned status code was : ' + response.getStatusCode() + ' ' + response.getStatus() + ' Body: ' + response.getBody());
 
         }catch(System.CalloutException e){
             System.debug('An unexpected error has occurred: ' + e.getMessage());
@@ -80,20 +81,28 @@ public class PersonController {
         }
 
         if(response.getStatusCode() == 200) {
-            
-            System.debug('STATUS:' + response.getStatus());
-            System.debug('STATUS_CODE:' + response.getStatusCode());
-            System.debug(response.getBody());
-
             updateRecordAfterSync(person);
-
         }else{
-            System.debug('The returned status code was : ' + response.getStatusCode() + ' ' + response.getStatus() + ' Body: ' + response.getBody());
-
             throw new AuraHandledException('The returned status code was : ' + response.getStatusCode() + ' ' + response.getStatus());
         }
 
+        return response;
     }
+
+    private static HttpRequest createRequest(String endpoint, Object objectToSerialize){
+
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint(endpoint);
+        request.setMethod('POST');
+        request.setHeader('Content-Type', 'application/json');
+        
+        String serializedObject = JSON.serialize(objectToSerialize);
+        request.setBody(serializedObject);
+
+        return request;
+    }
+
+    
 
     public static void updateRecordAfterSync(Person__c person){
         person.Is_Synced__c = true;
