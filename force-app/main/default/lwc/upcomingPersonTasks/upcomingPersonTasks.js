@@ -42,6 +42,7 @@ export default class UpcomingPersonTasks extends LightningElement {
             
             this.showToastMessage("Person Sync", "The person was synced successfully", "success");
 
+            this.refreshPage();
         })
         .catch(error => {
             
@@ -57,6 +58,12 @@ export default class UpcomingPersonTasks extends LightningElement {
             variant: variant
         });
         this.dispatchEvent(toastEvent);
+    }
+
+    refreshPage() {    
+        setTimeout(function () {
+            location.reload()
+        }, 1000);
     }
 
 
